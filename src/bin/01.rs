@@ -3,25 +3,26 @@ use std::io::BufRead;
 advent_of_code::solution!(1);
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let it = input.as_bytes().lines();
-    let mut solution = 0;
-    for line in it.flatten() {
-        let num = find_number(&line);
-        solution += num;
-    }
-
-    Some(solution)
+    Some(
+        input
+            .as_bytes()
+            .lines()
+            .flatten()
+            .map(|s| find_number(&s))
+            .sum::<u32>(),
+    )
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let it = input.as_bytes().lines();
-    let mut solution = 0;
-    for line in it.flatten() {
-        let num = find_number(&replace_word_digit(&line));
-        solution += num;
-    }
-
-    Some(solution)
+    Some(
+        input
+            .as_bytes()
+            .lines()
+            .flatten()
+            .map(|s| replace_word_digit(&s))
+            .map(|s| find_number(&s))
+            .sum::<u32>(),
+    )
 }
 
 fn find_number(s: &String) -> u32 {
