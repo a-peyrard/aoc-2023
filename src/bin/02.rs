@@ -25,8 +25,23 @@ pub fn part_one(input: &str) -> Option<u32> {
     )
 }
 
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<u32> {
+    Some(
+        input
+            .as_bytes()
+            .lines()
+            .flatten()
+            .map(|s| s.split(':').nth(1).unwrap().to_owned())
+            .map(|s| {
+                s.split(';')
+                    .map(str::trim)
+                    .map(Rgb::parse)
+                    .collect::<Vec<_>>()
+            })
+            .map(Rgb::max)
+            .map(Rgb::power)
+            .sum::<u32>(),
+    )
 }
 
 struct Rgb {
@@ -75,6 +90,10 @@ impl Rgb {
     fn less_or_equal(&self, other: &Self) -> bool {
         self.r <= other.r && self.g <= other.g && self.b <= other.b
     }
+
+    fn power(self) -> u32 {
+        self.r as u32 * self.g as u32 * self.b as u32
+    }
 }
 
 #[cfg(test)]
@@ -90,6 +109,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(2286));
     }
 }
