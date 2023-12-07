@@ -37,17 +37,20 @@ impl Card {
             numbers,
         }
     }
-    fn score(self) -> u32 {
-        let matches = self
-            .numbers
-            .iter()
-            .filter(|n| self.winning_numbers.contains(n))
-            .count();
+    fn score(&self) -> u32 {
+        let matches = self.count();
 
         match matches {
             0 => 0,
             _ => 1 << (matches - 1),
         }
+    }
+
+    fn count(&self) -> usize {
+        self.numbers
+            .iter()
+            .filter(|n| self.winning_numbers.contains(n))
+            .count()
     }
 }
 
@@ -63,8 +66,23 @@ pub fn part_one(input: &str) -> Option<u32> {
     )
 }
 
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<u32> {
+    let cards = input
+        .as_bytes()
+        .lines()
+        .flatten()
+        .map(Card::new)
+        .collect::<Vec<Card>>();
+
+    let mut cards_instances = vec![1; cards.len()];
+    for (idx, card) in cards.iter().enumerate() {
+        let prize = card.count();
+        for new_card_id in idx + 1..idx + 1 + prize {
+            cards_instances[new_card_id] += cards_instances[idx]
+        }
+    }
+
+    Some(cards_instances.iter().sum())
 }
 
 #[cfg(test)]
@@ -80,6 +98,6 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(30));
     }
 }
