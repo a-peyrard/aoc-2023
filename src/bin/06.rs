@@ -1,6 +1,7 @@
+use itertools::Itertools;
 advent_of_code::solution!(6);
 
-pub fn part_one(input: &str) -> Option<u32> {
+pub fn part_one(input: &str) -> Option<u64> {
     Some(
         Race::parse(input)
             .into_iter()
@@ -9,14 +10,14 @@ pub fn part_one(input: &str) -> Option<u32> {
     )
 }
 
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<u64> {
+    Some(Race::parse_unique(input).winning_possibilities())
 }
 
 #[derive(Copy, Clone)]
 struct Race {
-    time: u32,
-    distance: u32,
+    time: u64,
+    distance: u64,
 }
 
 impl Race {
@@ -36,14 +37,26 @@ impl Race {
         result
     }
 
-    fn parse_line(line: &str) -> Vec<u32> {
+    fn parse_unique(input: &str) -> Self {
+        let mut lines = input.lines();
+        let time = Race::parse_line_unique(lines.next().unwrap());
+        let distance = Race::parse_line_unique(lines.next().unwrap());
+
+        Self { time, distance }
+    }
+
+    fn parse_line(line: &str) -> Vec<u64> {
         line.split_whitespace()
             .skip(1)
             .map(|w| w.parse().unwrap())
-            .collect::<Vec<u32>>()
+            .collect::<Vec<u64>>()
     }
 
-    fn winning_possibilities(&self) -> u32 {
+    fn parse_line_unique(line: &str) -> u64 {
+        line.split_whitespace().skip(1).join("").parse().unwrap()
+    }
+
+    fn winning_possibilities(&self) -> u64 {
         let mut winning_possibilities = 0;
         let pivot = self.time / 2;
         for n in pivot..self.time + 1 {
@@ -61,7 +74,7 @@ impl Race {
         winning_possibilities
     }
 
-    fn distance_at(time: u32, press: u32) -> u32 {
+    fn distance_at(time: u64, press: u64) -> u64 {
         (time - press) * press
     }
 }
@@ -85,7 +98,13 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(71503));
+    }
+
+    #[test]
+    fn test_solution_two() {
+        let result = part_two(&advent_of_code::template::read_file("inputs", DAY));
+        assert_eq!(result, Some(36919753));
     }
 
     #[test]
