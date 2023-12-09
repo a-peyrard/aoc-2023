@@ -1,24 +1,29 @@
-use itertools::Itertools;
-use phf::phf_map;
 use std::cmp::Ordering;
 use std::fmt;
+
+use itertools::Itertools;
+use phf::phf_map;
 
 advent_of_code::solution!(7);
 
 pub fn part_one(input: &str) -> Option<u32> {
+    part_gen(input, Hand::parse)
+}
+
+pub fn part_two(input: &str) -> Option<u32> {
+    part_gen(input, Hand::parse_part2)
+}
+
+fn part_gen(input: &str, hand_factory: fn(&str) -> Hand) -> Option<u32> {
     Some(
         input
             .lines()
-            .map(Hand::parse)
+            .map(hand_factory)
             .sorted()
             .enumerate()
             .map(|(idx, hand)| hand.bid as u32 * (idx as u32 + 1))
             .sum(),
     )
-}
-
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
 }
 
 /*
@@ -50,6 +55,22 @@ static CARDS_VALUE: phf::Map<u8, u8> = phf_map! {
     b'9' => 7,
     b'T' => 8,
     b'J' => 9,
+    b'Q' => 10,
+    b'K' => 11,
+    b'A' => 12,
+};
+
+static CARDS_VALUE_PART2: phf::Map<u8, u8> = phf_map! {
+    b'J' => 0,
+    b'2' => 1,
+    b'3' => 2,
+    b'4' => 3,
+    b'5' => 4,
+    b'6' => 5,
+    b'7' => 6,
+    b'8' => 7,
+    b'9' => 8,
+    b'T' => 9,
     b'Q' => 10,
     b'K' => 11,
     b'A' => 12,
@@ -101,6 +122,28 @@ impl Hand {
         }
     }
 
+    fn parse_part2(raw: &str) -> Self {
+        let mut tokens = raw.split(' ');
+        let cards = tokens
+            .next()
+            .unwrap()
+            .as_bytes()
+            .iter()
+            .map(|c| CARDS_VALUE_PART2.get(c).unwrap())
+            .copied()
+            .collect::<Vec<u8>>()
+            // fixme: is this necessary?
+            .try_into()
+            .unwrap();
+        let bid = tokens.next().unwrap().parse().unwrap();
+
+        Hand {
+            cards,
+            bid,
+            hand_type: Hand::hand_type_part2(cards),
+        }
+    }
+
     fn hand_type(cards: [u8; 5]) -> u8 {
         let mut counts = [0; 13];
         for card in cards.iter() {
@@ -122,6 +165,54 @@ impl Hand {
             [1, 4] => FOUR_OF_A_KIND,
             [5] => FIVE_OF_A_KIND,
             _ => unreachable!(),
+        }
+    }
+
+    fn hand_type_part2(cards: [u8; 5]) -> u8 {
+        let mut counts = [0; 13];
+        for card in cards.iter() {
+            counts[*card as usize] += 1;
+        }
+
+        let pattern_without_joker = counts
+            .into_iter()
+            .skip(1)
+            .filter(|c| *c > 0)
+            .sorted()
+            .collect::<Vec<u16>>();
+
+        let num_jokers = counts[0];
+        match num_jokers {
+            0 => match pattern_without_joker.as_slice() {
+                [1, 1, 1, 1, 1] => HIGH_CARD,
+                [1, 1, 1, 2] => ONE_PAIR,
+                [1, 2, 2] => TWO_PAIR,
+                [1, 1, 3] => THREE_OF_A_KIND,
+                [2, 3] => FULL_HOUSE,
+                [1, 4] => FOUR_OF_A_KIND,
+                [5] => FIVE_OF_A_KIND,
+                _ => unreachable!(),
+            },
+            1 => match pattern_without_joker.as_slice() {
+                [1, 1, 1, 1] => ONE_PAIR,
+                [1, 1, 2] => THREE_OF_A_KIND,
+                [2, 2] => FULL_HOUSE,
+                [1, 3] => FOUR_OF_A_KIND,
+                [4] => FIVE_OF_A_KIND,
+                _ => unreachable!(),
+            },
+            2 => match pattern_without_joker.as_slice() {
+                [1, 1, 1] => THREE_OF_A_KIND,
+                [1, 2] => FOUR_OF_A_KIND,
+                [3] => FIVE_OF_A_KIND,
+                _ => unreachable!(),
+            },
+            3 => match pattern_without_joker.as_slice() {
+                [1, 1] => FOUR_OF_A_KIND,
+                [2] => FIVE_OF_A_KIND,
+                _ => unreachable!(),
+            },
+            _ => FIVE_OF_A_KIND,
         }
     }
 }
@@ -178,7 +269,13 @@ mod tests {
     #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(5905));
+    }
+
+    #[test]
+    fn test_solution_two() {
+        let result = part_two(&advent_of_code::template::read_file("inputs", DAY));
+        assert_eq!(result, Some(254412181));
     }
 
     #[test]
@@ -194,4 +291,14 @@ mod tests {
         assert_eq!(Hand::parse("QQAQA 483") > Hand::parse("23456 483"), true);
         assert_eq!(Hand::parse("33332 483") > Hand::parse("2AAAA 483"), true);
     }
+
+    #[test]
+    fn test_parse2_three_of_a_kind_and_joker() {
+        let hand = Hand::parse_part2("AAAJ8 483");
+        assert_eq!(hand.hand_type, FOUR_OF_A_KIND);
+        assert_eq!(hand.cards, [12, 12, 12, 0, 7]);
+        assert_eq!(hand.bid, 483);
+    }
+
+    // fixme: check if the hand type hack is correct: hand_type + count[J] !!! probably not three of a kind +1 equals for of a kind, so it +2 to hand_type
 }
