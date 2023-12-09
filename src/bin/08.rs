@@ -1,8 +1,20 @@
-use std::collections::HashMap;
+use advent_of_code::util::math;
+use std::collections::{HashMap, HashSet};
 
 advent_of_code::solution!(8);
 
 pub fn part_one(input: &str) -> Option<u64> {
+    let (directions, nodes, mapping) = parse(input);
+
+    follow_instructions(
+        directions,
+        nodes,
+        *mapping.get("AAA").unwrap(),
+        *mapping.get("ZZZ").unwrap(),
+    )
+}
+
+fn parse(input: &str) -> (Vec<usize>, Vec<[usize; 2]>, HashMap<String, usize>) {
     let lines = input
         .lines()
         .map(|s| s.to_string())
@@ -29,12 +41,7 @@ pub fn part_one(input: &str) -> Option<u64> {
         nodes[pos] = successors;
     }
 
-    follow_instructions(
-        directions,
-        nodes,
-        *mapping.get("AAA").unwrap(),
-        *mapping.get("ZZZ").unwrap(),
-    )
+    (directions, nodes, mapping)
 }
 
 fn parse_node(
@@ -61,15 +68,15 @@ fn follow_instructions(
     target: usize,
 ) -> Option<u64> {
     let len = directions.len();
-    let mut step: u64 = 0;
+    let mut step: usize = 0;
     let mut position: usize = start;
     while position != target {
-        let direction = directions[(step % len as u64) as usize];
+        let direction = directions[step % len];
         position = nodes[position][direction];
         step += 1;
     }
 
-    Some(step)
+    Some(step as u64)
 }
 
 fn find_or_generate(
@@ -87,8 +94,46 @@ fn find_or_generate(
     }
 }
 
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<u64> {
+    let (directions, nodes, mapping) = parse(input);
+    let mut currents = mapping
+        .iter()
+        .filter(|(k, _)| k.ends_with('A'))
+        .map(|(_, v)| *v)
+        .collect::<Vec<usize>>();
+
+    let targets = mapping
+        .iter()
+        .filter(|(k, _)| k.ends_with('Z'))
+        .map(|(_, v)| *v)
+        .collect::<HashSet<usize>>();
+
+    /*
+        After analyzing the input cycles, we can see that for each starting node,
+        the number of step to find the first Z is the same number as the one to find the next Z and so on...
+        So we just need to find the first Z from each starting node and then find the LCM of all the cycle lengths.
+    */
+
+    let mut cycles_size = vec![0; currents.len()];
+    let mut cycle_found: u8 = 0;
+    let mut step: usize = 0;
+    let len = directions.len();
+    let all_cycles_found = (1 << currents.len()) - 1;
+    while cycle_found != all_cycles_found {
+        let direction = directions[step % len];
+
+        for (i, current) in currents.iter_mut().enumerate() {
+            *current = nodes[*current][direction];
+            if targets.contains(current) {
+                cycle_found |= 1 << i;
+                cycles_size[i] = step + 1;
+            }
+        }
+
+        step += 1;
+    }
+
+    Some(math::lcm(&cycles_size) as u64)
 }
 
 #[cfg(test)]
@@ -112,24 +157,22 @@ mod tests {
     }
 
     #[test]
-    fn test_part_two_example1() {
+    fn test_part_two_example3() {
         let result = part_two(&advent_of_code::template::read_file_part(
-            "examples", DAY, 1,
+            "examples", DAY, 3,
         ));
-        assert_eq!(result, None);
-    }
-
-    #[test]
-    fn test_part_two_example2() {
-        let result = part_two(&advent_of_code::template::read_file_part(
-            "examples", DAY, 2,
-        ));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(6));
     }
 
     #[test]
     fn test_solution_one() {
         let result = part_one(&advent_of_code::template::read_file("inputs", DAY));
         assert_eq!(result, Some(16897));
+    }
+
+    #[test]
+    fn test_solution_two() {
+        let result = part_two(&advent_of_code::template::read_file("inputs", DAY));
+        assert_eq!(result, Some(16563603485021));
     }
 }
