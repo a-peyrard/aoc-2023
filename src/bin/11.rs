@@ -2,21 +2,25 @@ use advent_of_code::util::graph;
 use std::collections::HashSet;
 advent_of_code::solution!(11);
 
-pub type Galaxy = (usize, usize);
+pub type Galaxy = (i64, i64);
 
 pub trait Distance {
-    fn distance(self, other: Self) -> usize;
+    fn distance(self, other: Self) -> i64;
 }
 
-impl Distance for (usize, usize) {
-    fn distance(self, other: Self) -> usize {
+impl Distance for (i64, i64) {
+    fn distance(self, other: Self) -> i64 {
         let (x1, y1) = self;
         let (x2, y2) = other;
-        ((x1 as i32 - x2 as i32).abs() + (y1 as i32 - y2 as i32).abs()) as usize
+        (x1 - x2).abs() + (y1 - y2).abs()
     }
 }
 
-pub fn part_one(input: &str) -> Option<u32> {
+pub fn part_one(input: &str) -> Option<u64> {
+    part_gen(input, 2)
+}
+
+fn part_gen(input: &str, expansion_factor: i64) -> Option<u64> {
     let graph = graph::parse(input);
 
     let mut galaxies: Vec<Galaxy> = Vec::new();
@@ -52,7 +56,10 @@ pub fn part_one(input: &str) -> Option<u32> {
                 continue;
             }
             if *elem == b'#' {
-                galaxies.push((i + expanded_cols_so_far, j + expanded_rows_so_far));
+                galaxies.push((
+                    i as i64 - expanded_cols_so_far + (expansion_factor * expanded_cols_so_far),
+                    j as i64 - expanded_rows_so_far + (expansion_factor * expanded_rows_so_far),
+                ));
             }
         }
     }
@@ -60,7 +67,7 @@ pub fn part_one(input: &str) -> Option<u32> {
     Some(
         PairIterator::new(galaxies)
             .map(|(g1, g2)| g1.distance(g2))
-            .sum::<usize>() as u32,
+            .sum::<i64>() as u64,
     )
 }
 
@@ -98,8 +105,8 @@ impl Iterator for PairIterator {
     }
 }
 
-pub fn part_two(_input: &str) -> Option<u32> {
-    None
+pub fn part_two(input: &str) -> Option<u64> {
+    part_gen(input, 1000000)
 }
 
 #[cfg(test)]
@@ -119,9 +126,27 @@ mod tests {
     }
 
     #[test]
+    fn test_part_gen_expansion_10() {
+        let result = part_gen(&advent_of_code::template::read_file("examples", DAY), 10);
+        assert_eq!(result, Some(1030));
+    }
+
+    #[test]
+    fn test_part_gen_expansion_100() {
+        let result = part_gen(&advent_of_code::template::read_file("examples", DAY), 100);
+        assert_eq!(result, Some(8410));
+    }
+
+    #[test]
     fn test_part_two() {
         let result = part_two(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, None);
+        assert_eq!(result, Some(82000210));
+    }
+
+    #[test]
+    fn test_solution_two() {
+        let result = part_two(&advent_of_code::template::read_file("inputs", DAY));
+        assert_eq!(result, Some(707505470642));
     }
 
     #[test]
